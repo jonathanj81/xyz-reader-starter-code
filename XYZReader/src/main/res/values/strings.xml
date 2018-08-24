@@ -9,4 +9,6 @@
 
     <string name="up">Up</string>
 
+    <string name="placeholder">Finding your book...</string>
+
 </resources>

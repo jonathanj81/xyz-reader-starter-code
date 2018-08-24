@@ -1,20 +1,18 @@
 package com.example.xyzreader.ui;
 
 import android.animation.AnimatorInflater;
-import android.app.LoaderManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.Loader;
 import android.content.res.Configuration;
 import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.AppBarLayout;
-import android.support.design.widget.CollapsingToolbarLayout;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
@@ -22,23 +20,19 @@ import android.support.v7.widget.Toolbar;
 import android.text.Html;
 import android.text.format.DateUtils;
 import android.util.Log;
-import android.util.TypedValue;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.example.xyzreader.R;
 import com.example.xyzreader.data.ArticleLoader;
-import com.example.xyzreader.data.ItemsContract;
 import com.example.xyzreader.data.UpdaterService;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.GregorianCalendar;
-
-import okhttp3.internal.Util;
 
 /**
  * An activity representing a list of Articles. This activity has different presentations for
@@ -47,7 +41,10 @@ import okhttp3.internal.Util;
  * activity presents a grid of items as cards.
  */
 public class ArticleListActivity extends AppCompatActivity implements
-        LoaderManager.LoaderCallbacks<Cursor> {
+        LoaderManager.LoaderCallbacks<Cursor>{
+
+    public static long bookIDs[];
+    private static final String ID_KEY = "position";
 
     private static final String TAG = ArticleListActivity.class.toString();
     private Toolbar mToolbar;
@@ -75,7 +72,7 @@ public class ArticleListActivity extends AppCompatActivity implements
         }
 
         mRecyclerView = (RecyclerView) findViewById(R.id.recycler_view);
-        getLoaderManager().initLoader(0, null, this);
+        getSupportLoaderManager().initLoader(0,null,this);
 
         if (savedInstanceState == null) {
             refresh();
@@ -151,7 +148,12 @@ public class ArticleListActivity extends AppCompatActivity implements
         @Override
         public long getItemId(int position) {
             mCursor.moveToPosition(position);
-            return mCursor.getLong(ArticleLoader.Query._ID);
+            if (bookIDs == null){
+                bookIDs = new long[mCursor.getCount()];
+            }
+            long tempID = mCursor.getLong(ArticleLoader.Query._ID);
+            bookIDs[position] = tempID;
+            return tempID;
         }
 
         @Override
@@ -161,8 +163,7 @@ public class ArticleListActivity extends AppCompatActivity implements
             view.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    toDetail.putExtra("position", vh.getAdapterPosition());
-                    Log.i("LISTACTIVITY", ": " + vh.getAdapterPosition());
+                    toDetail.putExtra(ID_KEY, vh.getAdapterPosition());
                     startActivity(toDetail);
                 }
             });

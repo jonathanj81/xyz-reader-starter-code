@@ -1,44 +1,32 @@
 package com.example.xyzreader.ui;
 
-import android.animation.AnimatorInflater;
-import android.app.Fragment;
-import android.app.LoaderManager;
-import android.content.Intent;
-import android.content.Loader;
-import android.content.res.Configuration;
+import android.annotation.SuppressLint;
+import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.Color;
-import android.graphics.Rect;
 import android.graphics.Typeface;
-import android.graphics.drawable.ColorDrawable;
-
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.GregorianCalendar;
-
-import android.os.Build;
 import android.os.Bundle;
-import android.support.design.widget.AppBarLayout;
-import android.support.design.widget.FloatingActionButton;
-import android.support.v4.app.ShareCompat;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.support.v4.graphics.ColorUtils;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.graphics.Palette;
-import android.support.v7.widget.Toolbar;
 import android.text.Html;
 import android.text.format.DateUtils;
 import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
-import android.view.OrientationEventListener;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -59,10 +47,11 @@ public class ArticleDetailFragment extends Fragment implements
     public static final String ARG_ITEM_ID = "item_id";
 
     private Cursor mCursor;
-    private long mItemId;
+    private int mItemId;
     private View mRootView;
     private int mMutedColor = 0xFF333333;
     private ImageView mPhotoView;
+    private TextView mBodyView;
 
     private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss");
     // Use default locale format
@@ -77,10 +66,9 @@ public class ArticleDetailFragment extends Fragment implements
     public ArticleDetailFragment() {
     }
 
-    public static ArticleDetailFragment newInstance(long itemId) {
-        Log.i("FRAG-NEWiNSTANCE", ": fragment newinstance called");
+    public static ArticleDetailFragment newInstance(int itemId) {
         Bundle arguments = new Bundle();
-        arguments.putLong(ARG_ITEM_ID, itemId);
+        arguments.putInt(ARG_ITEM_ID, itemId);
         ArticleDetailFragment fragment = new ArticleDetailFragment();
         fragment.setArguments(arguments);
         return fragment;
@@ -89,60 +77,26 @@ public class ArticleDetailFragment extends Fragment implements
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.i("FRAG-ONCREATE", ": fragment oncreate called");
 
         if (getArguments().containsKey(ARG_ITEM_ID)) {
-            mItemId = getArguments().getLong(ARG_ITEM_ID);
-            Log.i("FRAG-CREATE-GETARGS", ": " + mItemId);
+            mItemId = getArguments().getInt(ARG_ITEM_ID);
         }
         setHasOptionsMenu(true);
+        setRetainInstance(true);
     }
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        Log.i("FRAG-ONACTCREATED", ": fragment onactivitycreated called");
-
-        // In support library r8, calling initLoader for a fragment in a FragmentPagerAdapter in
-        // the fragment's onCreate may cause the same LoaderManager to be dealt to multiple
-        // fragments because their mIndex is -1 (haven't been added to the activity yet). Thus,
-        // we do this in onActivityCreated.
-        getLoaderManager().initLoader(0, null, this);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
-        Log.i("FRAG-ONCREATEVIEW", ": fragment oncreateview called");
         mRootView = inflater.inflate(R.layout.fragment_article_detail, container, false);
-
-        /*FloatingActionButton fab = (FloatingActionButton)mRootView.findViewById(R.id.share_fab);
-        fab.setBackgroundColor(getResources().getColor(R.color.colorAccent));
-
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                startActivity(Intent.createChooser(ShareCompat.IntentBuilder.from(getActivity())
-                        .setType("text/plain")
-                        .setText("Some sample text")
-                        .getIntent(), getString(R.string.action_share)));
-            }
-        });*/
 
         return mRootView;
     }
-
-   /* @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case android.R.id.home:
-                getActivity().onNavigateUp();
-                return true;
-
-            default:
-                return super.onOptionsItemSelected(item);
-        }
-    }*/
 
     private Date parsePublishedDate() {
         try {
@@ -156,27 +110,20 @@ public class ArticleDetailFragment extends Fragment implements
     }
 
     private void bindViews() {
-        Log.i("FRAG-BINDVIEWS", ": fragment bindviews called");
         if (mRootView == null) {
             return;
         }
-        Log.i("FRAG-BINDVIEWS", ": fragment bindviews continued");
 
         mPhotoView = (ImageView) getActivity().findViewById(R.id.fragment_imageview);
         TextView titleView = (TextView) getActivity().findViewById(R.id.article_title);
         TextView bylineView = (TextView) getActivity().findViewById(R.id.article_byline);
         bylineView.setMovementMethod(new LinkMovementMethod());
-        TextView bodyView = (TextView) mRootView.findViewById(R.id.article_body);
+        mBodyView = (TextView) mRootView.findViewById(R.id.article_body);
 
-        //setUpBar();
-
-
-        bodyView.setTypeface(Typeface.createFromAsset(getResources().getAssets(), "Rokkitt-Medium.ttf"));
+        mBodyView.setTypeface(Typeface.createFromAsset(getResources().getAssets(), "Rokkitt-Medium.ttf"));
 
         if (mCursor != null) {
-            //mRootView.setAlpha(0);
             mRootView.setVisibility(View.VISIBLE);
-            //mRootView.animate().alpha(1);
             titleView.setText(mCursor.getString(ArticleLoader.Query.TITLE));
             Date publishedDate = parsePublishedDate();
             if (!publishedDate.before(START_OF_EPOCH.getTime())) {
@@ -197,7 +144,7 @@ public class ArticleDetailFragment extends Fragment implements
                                 + "</font>"));
 
             }
-            bodyView.setText(Html.fromHtml(mCursor.getString(ArticleLoader.Query.BODY).replaceAll("(\r\n\r\n)", "<br /><br />")));
+            mBodyView.setText(Html.fromHtml(mCursor.getString(ArticleLoader.Query.BODY).replaceAll("(\r\n\r\n)", "<br /><br />")));
             ImageLoaderHelper.getInstance(getActivity()).getImageLoader()
                     .get(mCursor.getString(ArticleLoader.Query.PHOTO_URL), new ImageLoader.ImageListener() {
                         @Override
@@ -221,19 +168,17 @@ public class ArticleDetailFragment extends Fragment implements
             mRootView.setVisibility(View.GONE);
             titleView.setText("N/A");
             bylineView.setText("N/A" );
-            bodyView.setText("N/A");
+            mBodyView.setText("N/A");
         }
     }
 
     @Override
-    public Loader<Cursor> onCreateLoader(int i, Bundle bundle) {
-        Log.i("FRAG-CREATELOADER", ": " + mItemId);
-        return ArticleLoader.newInstanceForItemId(getActivity(), mItemId);
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        return ArticleLoader.newInstanceForItemId(getActivity(), ArticleListActivity.bookIDs[mItemId]);
     }
 
     @Override
     public void onLoadFinished(Loader<Cursor> cursorLoader, Cursor cursor) {
-        Log.i("FRAG-LOADFINISHED", ": fragment loadfinished called");
         if (!isAdded()) {
             if (cursor != null) {
                 cursor.close();
@@ -243,41 +188,46 @@ public class ArticleDetailFragment extends Fragment implements
 
         mCursor = cursor;
         if (mCursor != null && !mCursor.moveToFirst()) {
-            Log.e(TAG, "Error reading item detail cursor");
             mCursor.close();
             mCursor = null;
         }
-
-        /*AppBarLayout appBarLayout = ((AppBarLayout)getActivity().findViewById(R.id.fragment_app_bar));
-        if (Build.VERSION.SDK_INT >= 21) {
-            appBarLayout.setStateListAnimator(AnimatorInflater.loadStateListAnimator(getActivity(), R.anim.appbar_elevation));
-        }*/
+        mRootView.findViewById(R.id.fragment_placeholder_layout)
+                .setVisibility(View.GONE);
         bindViews();
     }
 
     @Override
     public void onLoaderReset(Loader<Cursor> cursorLoader) {
-        Log.i("FRAG-LOADERRESET", ": fragment loaderreset called");
         bindViews();
         mCursor = null;
     }
 
-    /*private void setUpBar(){
-        Toolbar toolbar = (Toolbar)mRootView.findViewById(R.id.toolbar);
-        ((AppCompatActivity)getActivity()).setSupportActionBar(toolbar);
-        ActionBar actionbar = ((AppCompatActivity)getActivity()).getSupportActionBar();
-        actionbar.setDisplayHomeAsUpEnabled(true);
-        actionbar.setHomeAsUpIndicator(R.drawable.ic_arrow_back);
-        actionbar.setDisplayShowTitleEnabled(false);
-    }*/
+    @Override
+    public Animation onCreateAnimation(int transit, boolean enter, int nextAnim) {
+        Animation anim = AnimationUtils.loadAnimation(getActivity(), nextAnim);
 
-    /*@Override
-    public void onConfigurationChanged(Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-        LayoutInflater inflater = LayoutInflater.from(getActivity());
-        ViewGroup group = (ViewGroup)getView();
-        group.removeAllViewsInLayout();
-        inflater.inflate(R.layout.fragment_article_detail,group);
-        bindViews();
-    }*/
+        anim.setAnimationListener(new Animation.AnimationListener() {
+
+            @Override
+            public void onAnimationStart(Animation animation) {
+                Log.d(TAG, "Animation started.");
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+                Log.d(TAG, "Animation repeating.");
+                // additional functionality
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                Log.d(TAG, "Animation ended.");
+                mRootView.findViewById(R.id.fragment_placeholder_layout)
+                        .setVisibility(View.VISIBLE);
+                getLoaderManager().initLoader(1, null, ArticleDetailFragment.this);
+            }
+        });
+
+        return anim;
+    }
 }
