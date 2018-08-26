@@ -6,8 +6,8 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.AppBarLayout;
+import android.support.design.widget.CollapsingToolbarLayout;
 import android.support.design.widget.FloatingActionButton;
-import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.ShareCompat;
@@ -17,7 +17,10 @@ import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.FrameLayout;
+import android.widget.TextView;
 
 import com.example.xyzreader.R;
 
@@ -29,6 +32,7 @@ public class ArticleDetailActivity extends AppCompatActivity {
     private int mSelectedItemId;
     private BookSwipeListener mBookSwipeListener;
     private static final String ID_KEY = "position";
+    private CollapsingToolbarLayout mCollapsingToolbarLayyout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,6 +47,12 @@ public class ArticleDetailActivity extends AppCompatActivity {
         if (savedInstanceState == null) {
             if (getIntent().hasExtra(ID_KEY)) {
                 mSelectedItemId = getIntent().getIntExtra(ID_KEY, 0);
+                if (getIntent().hasExtra("title")){
+                    TextView tv = (TextView)findViewById(R.id.article_title);
+                    tv.setText(getIntent().getStringExtra("title"));
+                    TextView stv = (TextView)findViewById(R.id.article_byline);
+                    stv.setText(getIntent().getStringExtra("subtitle"));
+                }
                 openNewFragment(3);
             }
         } else {
@@ -63,6 +73,7 @@ public class ArticleDetailActivity extends AppCompatActivity {
                         .getIntent(), getString(R.string.action_share)));
             }
         });
+        mCollapsingToolbarLayyout = (CollapsingToolbarLayout)findViewById(R.id.fragment_toolbar_layout);
         listenForSwipes();
     }
 
@@ -71,20 +82,18 @@ public class ArticleDetailActivity extends AppCompatActivity {
         FragmentTransaction ft = fm.beginTransaction().disallowAddToBackStack();
         ArticleDetailFragment frag = ArticleDetailFragment.newInstance(mSelectedItemId);
 
+        Animation fadeOut = AnimationUtils.loadAnimation(this, R.anim.fade_out);
+
         switch (transactionType) {
             case 1:
-                //frag.setEnterTransition(new Slide(Gravity.RIGHT));
-                //frag.setExitTransition(new Slide(Gravity.LEFT));
                 ft.setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left);
+                mCollapsingToolbarLayyout.startAnimation(fadeOut);
                 break;
             case 2:
-                //frag.setEnterTransition(new Slide(Gravity.LEFT));
-                //frag.setExitTransition(new Slide(Gravity.RIGHT));
                 ft.setCustomAnimations(R.anim.enter_from_left, R.anim.exit_to_right);
+                mCollapsingToolbarLayyout.startAnimation(fadeOut);
                 break;
             case 3:
-                //frag.setEnterTransition(new Slide(Gravity.RIGHT));
-                //frag.setExitTransition(new Slide(Gravity.LEFT));
                 ft.setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left);
                 break;
             default:
@@ -112,7 +121,7 @@ public class ArticleDetailActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case android.R.id.home:
-                onNavigateUp();
+                onBackPressed();
                 return true;
 
             default:

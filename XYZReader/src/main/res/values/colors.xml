@@ -10,4 +10,5 @@
     <color name="colorAccent">#E4846B</color>
     <color name="theme_accent_light">#FFD2C6</color>
     <color name="text_color">#424242</color>
+    <color name="book_page_color">#fffef3</color>
 </resources>

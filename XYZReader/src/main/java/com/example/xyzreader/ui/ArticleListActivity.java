@@ -10,13 +10,14 @@ import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.AppBarLayout;
+import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
+import android.support.v4.util.Pair;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
-import android.support.v7.widget.Toolbar;
 import android.text.Html;
 import android.text.format.DateUtils;
 import android.util.Log;
@@ -30,7 +31,6 @@ import com.example.xyzreader.data.UpdaterService;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.GregorianCalendar;
 
@@ -45,12 +45,13 @@ public class ArticleListActivity extends AppCompatActivity implements
 
     public static long bookIDs[];
     private static final String ID_KEY = "position";
+    private static final String MAIN_TRANSITION = "transition";
 
     private static final String TAG = ArticleListActivity.class.toString();
-    private Toolbar mToolbar;
     private SwipeRefreshLayout mSwipeRefreshLayout;
     private RecyclerView mRecyclerView;
-    private Intent toDetail;
+    private static Intent toDetail;
+    private Context mContext;
 
     private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss");
     // Use default locale format
@@ -62,8 +63,6 @@ public class ArticleListActivity extends AppCompatActivity implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_article_list);
-
-        mToolbar = (Toolbar) findViewById(R.id.toolbar);
 
         mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh_layout);
         AppBarLayout appBarLayout = (AppBarLayout)findViewById(R.id.app_bar);
@@ -79,6 +78,7 @@ public class ArticleListActivity extends AppCompatActivity implements
         }
 
         toDetail = new Intent(ArticleListActivity.this, ArticleDetailActivity.class);
+        mContext = this;
     }
 
     private void refresh() {
@@ -159,15 +159,8 @@ public class ArticleListActivity extends AppCompatActivity implements
         @Override
         public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             View view = getLayoutInflater().inflate(R.layout.list_item_article, parent, false);
-            final ViewHolder vh = new ViewHolder(view);
-            view.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    toDetail.putExtra(ID_KEY, vh.getAdapterPosition());
-                    startActivity(toDetail);
-                }
-            });
-            return vh;
+
+            return new ViewHolder(view);
         }
 
         private Date parsePublishedDate() {
@@ -176,13 +169,12 @@ public class ArticleListActivity extends AppCompatActivity implements
                 return dateFormat.parse(date);
             } catch (ParseException ex) {
                 Log.e(TAG, ex.getMessage());
-                Log.i(TAG, "passing today's date");
                 return new Date();
             }
         }
 
         @Override
-        public void onBindViewHolder(ViewHolder holder, int position) {
+        public void onBindViewHolder(final ViewHolder holder, int position) {
             mCursor.moveToPosition(position);
             holder.titleView.setText(mCursor.getString(ArticleLoader.Query.TITLE));
             Date publishedDate = parsePublishedDate();
@@ -205,6 +197,32 @@ public class ArticleListActivity extends AppCompatActivity implements
                     mCursor.getString(ArticleLoader.Query.THUMB_URL),
                     ImageLoaderHelper.getInstance(ArticleListActivity.this).getImageLoader());
             holder.thumbnailView.setAspectRatio(mCursor.getFloat(ArticleLoader.Query.ASPECT_RATIO));
+
+            holder.thumbnailView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    toDetail.putExtra(ID_KEY, holder.getAdapterPosition());
+
+                    if (Build.VERSION.SDK_INT >= 21){
+                        holder.thumbnailView.setTransitionName("photo_transition");
+                        holder.titleView.setTransitionName("title_transition");
+                        holder.subtitleView.setTransitionName("subtitle_transition");
+                        ArticleListActivity activity = (ArticleListActivity) v.getContext();
+
+                        ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(
+                                activity,
+                                Pair.create((View)holder.thumbnailView, "photo_transition"),
+                                Pair.create((View)holder.titleView, "title_transition"),
+                                Pair.create((View)holder.subtitleView, "subtitle_transition"));
+
+                        toDetail.putExtra("title", holder.titleView.getText());
+                        toDetail.putExtra("subtitle", holder.subtitleView.getText());
+                        startActivity(toDetail, options.toBundle());
+                    }else {
+                        startActivity(toDetail);
+                    }
+                }
+            });
         }
 
         @Override

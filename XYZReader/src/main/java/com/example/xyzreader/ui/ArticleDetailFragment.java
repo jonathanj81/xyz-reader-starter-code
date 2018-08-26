@@ -1,7 +1,7 @@
 package com.example.xyzreader.ui;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Typeface;
@@ -10,12 +10,12 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
 import android.support.v4.graphics.ColorUtils;
+import android.support.v4.widget.NestedScrollView;
 import android.support.v7.graphics.Palette;
 import android.text.Html;
 import android.text.format.DateUtils;
@@ -24,9 +24,9 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -52,6 +52,8 @@ public class ArticleDetailFragment extends Fragment implements
     private int mMutedColor = 0xFF333333;
     private ImageView mPhotoView;
     private TextView mBodyView;
+    private NestedScrollView mNestedScrollView;
+    private TextView mTitleView;
 
     private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss");
     // Use default locale format
@@ -88,13 +90,15 @@ public class ArticleDetailFragment extends Fragment implements
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
+        getLoaderManager().initLoader(1, null, ArticleDetailFragment.this);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
         mRootView = inflater.inflate(R.layout.fragment_article_detail, container, false);
-
+        mNestedScrollView = (NestedScrollView)mRootView.findViewById(R.id.nested_scrollview);
+;
         return mRootView;
     }
 
@@ -104,18 +108,17 @@ public class ArticleDetailFragment extends Fragment implements
             return dateFormat.parse(date);
         } catch (ParseException ex) {
             Log.e(TAG, ex.getMessage());
-            Log.i(TAG, "passing today's date");
             return new Date();
         }
     }
 
-    private void bindViews() {
+    private void bindFastViews() {
         if (mRootView == null) {
             return;
         }
 
         mPhotoView = (ImageView) getActivity().findViewById(R.id.fragment_imageview);
-        TextView titleView = (TextView) getActivity().findViewById(R.id.article_title);
+        mTitleView = (TextView) getActivity().findViewById(R.id.article_title);
         TextView bylineView = (TextView) getActivity().findViewById(R.id.article_byline);
         bylineView.setMovementMethod(new LinkMovementMethod());
         mBodyView = (TextView) mRootView.findViewById(R.id.article_body);
@@ -124,7 +127,7 @@ public class ArticleDetailFragment extends Fragment implements
 
         if (mCursor != null) {
             mRootView.setVisibility(View.VISIBLE);
-            titleView.setText(mCursor.getString(ArticleLoader.Query.TITLE));
+            mTitleView.setText(mCursor.getString(ArticleLoader.Query.TITLE));
             Date publishedDate = parsePublishedDate();
             if (!publishedDate.before(START_OF_EPOCH.getTime())) {
                 bylineView.setText(Html.fromHtml(
@@ -144,7 +147,6 @@ public class ArticleDetailFragment extends Fragment implements
                                 + "</font>"));
 
             }
-            mBodyView.setText(Html.fromHtml(mCursor.getString(ArticleLoader.Query.BODY).replaceAll("(\r\n\r\n)", "<br /><br />")));
             ImageLoaderHelper.getInstance(getActivity()).getImageLoader()
                     .get(mCursor.getString(ArticleLoader.Query.PHOTO_URL), new ImageLoader.ImageListener() {
                         @Override
@@ -166,7 +168,7 @@ public class ArticleDetailFragment extends Fragment implements
                     });
         } else {
             mRootView.setVisibility(View.GONE);
-            titleView.setText("N/A");
+            mTitleView.setText("N/A");
             bylineView.setText("N/A" );
             mBodyView.setText("N/A");
         }
@@ -191,14 +193,11 @@ public class ArticleDetailFragment extends Fragment implements
             mCursor.close();
             mCursor = null;
         }
-        mRootView.findViewById(R.id.fragment_placeholder_layout)
-                .setVisibility(View.GONE);
-        bindViews();
+        bindFastViews();
     }
 
     @Override
     public void onLoaderReset(Loader<Cursor> cursorLoader) {
-        bindViews();
         mCursor = null;
     }
 
@@ -210,21 +209,32 @@ public class ArticleDetailFragment extends Fragment implements
 
             @Override
             public void onAnimationStart(Animation animation) {
-                Log.d(TAG, "Animation started.");
             }
 
             @Override
             public void onAnimationRepeat(Animation animation) {
-                Log.d(TAG, "Animation repeating.");
-                // additional functionality
             }
 
             @Override
             public void onAnimationEnd(Animation animation) {
-                Log.d(TAG, "Animation ended.");
-                mRootView.findViewById(R.id.fragment_placeholder_layout)
-                        .setVisibility(View.VISIBLE);
-                getLoaderManager().initLoader(1, null, ArticleDetailFragment.this);
+                mBodyView.setText(Html.fromHtml(mCursor.getString(ArticleLoader.Query.BODY).replaceAll("(\r\n\r\n)", "<br /><br />")));
+                final SharedPreferences prefs = getActivity().getPreferences(Context.MODE_PRIVATE);
+                final int pos = prefs.getInt(String.valueOf(mItemId),0);
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        mNestedScrollView.scrollTo(0, pos);
+                    }
+                }, 500);
+
+                mNestedScrollView.getViewTreeObserver().addOnScrollChangedListener(new ViewTreeObserver.OnScrollChangedListener() {
+                    @Override
+                    public void onScrollChanged() {
+                        SharedPreferences.Editor editor = prefs.edit();
+                        editor.putInt(String.valueOf(mItemId), mNestedScrollView.getScrollY());
+                        editor.apply();
+                    }
+                });
             }
         });
 

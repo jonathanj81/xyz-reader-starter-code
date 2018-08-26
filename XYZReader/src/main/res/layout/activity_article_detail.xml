@@ -1,16 +1,8 @@
-<!--<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-    <android.support.v4.view.ViewPager
-        android:id="@+id/pager"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-</FrameLayout> -->
 <android.support.design.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/book_page_color">
 
     <android.support.design.widget.AppBarLayout
         android:id="@+id/fragment_app_bar"
@@ -35,6 +27,7 @@
                 android:layout_height="match_parent"
                 android:scaleType="centerCrop"
                 android:src="@drawable/book_stack"
+                android:transitionName="photo_transition"
                 app:layout_collapseMode="pin" />
 
             <LinearLayout
@@ -60,14 +53,16 @@
                     android:paddingBottom="@dimen/detail_metabar_title_bottom_padding"
                     android:textAppearance="@style/TextAppearance.AppCompat.Headline"
                     android:textColor="@android:color/black"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:transitionName="title_transition" />
 
                 <TextView
                     android:id="@+id/article_byline"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
-                    android:textColor="@color/text_color" />
+                    android:textColor="@color/text_color"
+                    android:transitionName="subtitle_transition" />
             </LinearLayout>
 
             <android.support.v7.widget.Toolbar
@@ -85,8 +80,7 @@
         android:id="@+id/fragment_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
-    </FrameLayout>
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"></FrameLayout>
 
 
     <android.support.design.widget.FloatingActionButton
